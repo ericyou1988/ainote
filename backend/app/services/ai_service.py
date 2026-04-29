@@ -102,6 +102,22 @@ def detect_language_tags(content: str) -> list[str]:
     return tags if tags else ["中文"]
 
 
+def _extract_delta(chunk) -> str | None:
+    if not chunk.choices:
+        return None
+    delta = chunk.choices[0].delta
+    text = getattr(delta, "content", None) or ""
+    reasoning = getattr(delta, "reasoning", None) or getattr(delta, "reasoning_content", None) or ""
+    result = text + reasoning
+    return result if result else None
+
+
+def _resolve_model(model: str, base_url: str) -> str:
+    if "openrouter" in base_url.lower() and "/" not in model.split("/")[0]:
+        return f"openrouter/{model}"
+    return model
+
+
 async def analyze_note(db: Session, note: Note, provider: AIProvider):
     content_type = detect_content_type(note.content)
 
@@ -121,8 +137,8 @@ async def analyze_note(db: Session, note: Note, provider: AIProvider):
         {"role": "user", "content": note.content},
     ]
 
-    response = litellm.completion(
-        model=provider.model,
+    response = await litellm.acompletion(
+        model=_resolve_model(provider.model, provider.base_url),
         api_base=provider.base_url,
         api_key=api_key,
         messages=messages,
@@ -130,9 +146,9 @@ async def analyze_note(db: Session, note: Note, provider: AIProvider):
     )
 
     full_content = ""
-    for chunk in response:
-        if chunk.choices and chunk.choices[0].delta.content:
-            content = chunk.choices[0].delta.content
+    async for chunk in response:
+        content = _extract_delta(chunk)
+        if content:
             full_content += content
             yield content
 
@@ -170,8 +186,8 @@ async def chat_message(db: Session, note: Note, provider: AIProvider, user_messa
     messages = [{"role": "system", "content": system_prompt}]
     messages += conversation.messages
 
-    response = litellm.completion(
-        model=provider.model,
+    response = await litellm.acompletion(
+        model=_resolve_model(provider.model, provider.base_url),
         api_base=provider.base_url,
         api_key=api_key,
         messages=messages,
@@ -179,9 +195,9 @@ async def chat_message(db: Session, note: Note, provider: AIProvider, user_messa
     )
 
     assistant_content = ""
-    for chunk in response:
-        if chunk.choices and chunk.choices[0].delta.content:
-            content = chunk.choices[0].delta.content
+    async for chunk in response:
+        content = _extract_delta(chunk)
+        if content:
             assistant_content += content
             yield content
 

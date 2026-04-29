@@ -75,17 +75,28 @@ def set_current(db: Session, provider_id: str) -> AIProvider | None:
 
 async def test_connection(provider: AIProvider) -> tuple[bool, str, float | None]:
     import litellm
+    from cryptography.fernet import InvalidToken
     try:
         api_key = decrypt_key(provider.api_key)
+    except InvalidToken:
+        return False, "加密密钥已变更，请重新配置 API Key", None
+    try:
         start = time.time()
+        model_name = provider.model
+        if "openrouter" in provider.base_url.lower() and "/" not in model_name.split("/")[0]:
+            model_name = f"openrouter/{model_name}"
         response = litellm.completion(
-            model=provider.model,
+            model=model_name,
             api_base=provider.base_url,
             api_key=api_key,
             messages=[{"role": "user", "content": "hi"}],
             max_tokens=1,
+            timeout=10,
         )
         elapsed = (time.time() - start) * 1000
         return True, "连接成功", elapsed
+    except litellm.Timeout:
+        return False, "连接超时，请检查网络或接口地址", None
     except Exception as e:
-        return False, str(e), None
+        msg = str(e) or f"连接失败: {type(e).__name__}"
+        return False, msg, None

@@ -176,6 +176,29 @@ AI 分析需要 3-10 秒，使用 SSE (Server-Sent Events) 流式返回分析结
 更新笔记 status = analyzed
 ```
 
+### 4.1.1 流式响应兼容层
+
+系统支持所有主流大模型，包括推理模型（reasoning models）。不同模型的响应字段不同：
+- 标准模型：响应内容在 `delta.content`
+- 推理模型（如腾讯混元 HY3）：推理过程在 `delta.reasoning` 或 `delta.reasoning_content`
+
+`ai_service.py` 中的 `_extract_delta()` 函数统一提取所有响应字段：
+
+```python
+def _extract_delta(chunk) -> str | None:
+    delta = chunk.choices[0].delta
+    text = getattr(delta, "content", None) or ""
+    reasoning = getattr(delta, "reasoning", None) or getattr(delta, "reasoning_content", None) or ""
+    result = text + reasoning
+    return result if result else None
+```
+
+`analyze_note()` 和 `chat_message()` 的流式循环均调用此函数，确保所有模型（标准/推理）的响应都能正确渲染。
+
+### 4.1.2 聚合路由平台自动前缀补全
+
+对于 OpenRouter 等聚合平台，LiteLLM 需要模型名带 provider 前缀（如 `openrouter/tencent/hy3-preview:free`）。用户在服务商配置中只需填写裸模型名（如 `tencent/hy3-preview:free`），`provider_service.py` 的 `test_connection()` 会自动检测 base_url 是否为 OpenRouter，如果是且模型名无 provider 前缀，则自动补全 `openrouter/` 前缀。
+
 ### 4.2 对话持久化
 
 每条笔记的对话独立存储。首次 AI 分析完成后，自动为该笔记创建对话记录，分析结果作为首条消息存入。后续用户追问追加到 messages 数组。
@@ -185,6 +208,10 @@ AI 分析需要 3-10 秒，使用 SSE (Server-Sent Events) 流式返回分析结
 - SQLite 中 API Key 使用 Fernet 对称加密存储
 - 加密密钥通过环境变量注入，不写入代码或数据库
 - 前端只接收脱敏后的 Key（`sk-***abc` 格式）
+
+### 4.3.1 测试连接实现
+
+`provider_service.py` 的 `test_connection()` 使用实际 completion API 调用验证连通性（10s 超时），而非仅检查 `/models` 端点。这确保配置的有效性不仅限于 API 可达，还包括模型可调用。
 
 ### 4.4 语言标签自动判断
 
@@ -310,3 +337,4 @@ ainote/
 | 单 SQLite 文件损坏 | 数据丢失 | 每日自动备份到独立文件 |
 | API Key 泄露 | 安全问题 | 加密存储 + 环境变量 + 前端脱敏 |
 | 未来多用户并发 | 性能瓶颈 | 预留 PostgreSQL 迁移路径 |
+| 新模型响应格式不同 | 推理模型返回空内容 | `_extract_delta()` 兼容层覆盖 content/reasoning/reasoning_content |

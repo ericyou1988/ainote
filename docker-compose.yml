@@ -7,7 +7,7 @@ services:
       - ./backend/data:/app/data
     environment:
       - APP_ENV=production
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-eFqopC2tJsW_JLEMLDs6TZHcneubdDJhAuOKgda75eA=}
     restart: unless-stopped
 
   frontend:

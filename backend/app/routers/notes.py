@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sa_func
 from typing import Optional
 from app.database import get_db
 from app.models.note import Note, NoteStatus
@@ -30,9 +31,16 @@ def list_notes(
 
     if tags:
         tag_list = tags.split(",")
-        # SQLite JSON: check if any of the requested tags are in language_tags
+        # SQLite JSON: use json_each to check if tag exists in array
+        # For multiple tags, use OR logic (any match)
+        from sqlalchemy import text
+        conditions = []
         for tag in tag_list:
-            query = query.filter(Note.language_tags.contains(f'"{tag}"'))
+            conditions.append(
+                text(f"EXISTS (SELECT 1 FROM json_each(language_tags) WHERE value = '{tag}')")
+            )
+        from sqlalchemy import or_
+        query = query.filter(or_(*conditions))
 
     order_col = Note.updated_at if sort == "updated_at" else Note.created_at
     query = query.order_by(order_col.desc())
