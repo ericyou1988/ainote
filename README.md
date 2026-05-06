@@ -26,7 +26,181 @@ docker compose up -d --build
 
 浏览器打开 `http://localhost` 即可使用。
 
-## 部署指南（阿里云）
+## 部署方式一：Docker Compose（推荐）
+
+```bash
+git clone https://github.com/ericyou1988/ainote.git
+cd ainote
+docker compose up -d --build
+```
+
+浏览器打开 `http://localhost` 即可使用。
+
+## 部署方式二：直接部署到服务器（不用 Docker）
+
+适合不使用 Docker 的环境，直接在 Ubuntu 服务器上运行。
+
+### 前置条件
+
+- Ubuntu 22.04 或更高版本
+- Python 3.11+
+- Node.js 20+
+- Nginx
+
+```bash
+# 安装 Python 3.11
+sudo apt update && sudo apt install -y python3.11 python3.11-venv python3-pip
+
+# 安装 Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# 安装 Nginx
+sudo apt install -y nginx
+```
+
+### 步骤 1：克隆代码
+
+```bash
+git clone https://github.com/ericyou1988/ainote.git
+cd ainote
+```
+
+### 步骤 2：部署后端
+
+```bash
+cd backend
+
+# 创建虚拟环境
+python3.11 -m venv venv
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 创建数据目录
+mkdir -p data
+
+# 测试启动（确认无报错后 Ctrl+C 退出）
+gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 120
+```
+
+**设置 systemd 服务（后台常驻运行）：**
+
+```bash
+sudo tee /etc/systemd/system/ainote-backend.service << 'EOF'
+[Unit]
+Description=AInote Backend
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+WorkingDirectory=/opt/ainote/backend
+Environment=APP_ENV=production
+Environment=ENCRYPTION_KEY=eFqopC2tJsW_JLEMLDs6TZHcneubdDJhAuOKgda75eA=
+ExecStart=/opt/ainote/backend/venv/bin/gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000 --timeout 120
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 如果代码不在 /opt/ainote，先移动或修改 WorkingDirectory 和 ExecStart 路径
+# sudo cp -r /home/your-user/ainote /opt/ainote
+# sudo chown -R www-data:www-data /opt/ainote/backend/data
+
+sudo systemctl daemon-reload
+sudo systemctl enable ainote-backend
+sudo systemctl start ainote-backend
+```
+
+### 步骤 3：构建前端
+
+```bash
+cd ../frontend
+
+npm install
+npm run build
+```
+
+### 步骤 4：配置 Nginx
+
+```bash
+sudo tee /etc/nginx/sites-available/ainote << 'EOF'
+server {
+    listen 80;
+    server_name _;
+
+    # 前端静态文件
+    root /opt/ainote/frontend/dist;
+    index index.html;
+
+    # API 反向代理
+    location /api {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_buffering off;
+        proxy_cache off;
+        # SSE 流式输出支持
+        proxy_set_header Connection '';
+        proxy_http_version 1.1;
+        chunked_transfer_encoding off;
+        proxy_read_timeout 120s;
+    }
+
+    # SPA 路由
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
+
+# 复制前端构建产物到 Nginx 目录
+sudo mkdir -p /opt/ainote/frontend
+sudo cp -r dist /opt/ainote/frontend/
+
+# 启用站点
+sudo ln -sf /etc/nginx/sites-available/ainote /etc/nginx/sites-enabled/ainote
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### 步骤 5：验证
+
+```bash
+curl http://localhost/api/health
+# 预期返回: {"status":"ok"}
+```
+
+浏览器打开 `http://服务器IP` 即可使用。
+
+### SSL / HTTPS
+
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d your-domain.com
+```
+
+### 服务管理命令
+
+```bash
+# 查看后端状态
+sudo systemctl status ainote-backend
+
+# 重启后端
+sudo systemctl restart ainote-backend
+
+# 查看后端日志
+sudo journalctl -u ainote-backend -f
+
+# 重启 Nginx
+sudo systemctl reload nginx
+```
+
+## 部署指南（阿里云 Docker）
 
 ### 前置条件
 
