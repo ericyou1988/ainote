@@ -5,10 +5,10 @@ AI 驱动的个人笔记应用，融合提示词管理与英语学习。
 ## 架构
 
 ```
-浏览器 → Nginx (端口 80) → 前端 (React SPA)
-                        → /api/* → 后端 (FastAPI, 端口 8000)
-                                        → SQLite (./backend/data/ainote.db)
-                                        → 外部 AI 服务商 (HTTP API)
+浏览器 → Nginx (端口 8880) → 前端 (React SPA)
+                         → /api/* → 后端 (FastAPI, 端口 38000)
+                                         → SQLite (./backend/data/ainote.db)
+                                         → 外部 AI 服务商 (HTTP API)
 ```
 
 **技术栈：**
@@ -24,17 +24,57 @@ cd ainote
 docker compose up -d --build
 ```
 
-浏览器打开 `http://localhost` 即可使用。
+浏览器打开 `http://localhost:8880` 即可使用。
 
 ## 部署方式一：Docker Compose（推荐）
 
+### 前置条件
+
+- Ubuntu 22.04 或更高版本
+- 已安装 Docker 和 Docker Compose
+- 端口 8880 和 38000 未被占用
+
+### 部署步骤
+
 ```bash
+# 1. 克隆仓库
 git clone https://github.com/ericyou1988/ainote.git
 cd ainote
+
+# 2. （可选）生成自定义加密密钥
+# 跳过此步骤则使用 docker-compose.yml 中的默认密钥
+export ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+
+# 3. 启动服务
 docker compose up -d --build
+
+# 4. 验证
+curl http://localhost:38000/api/health
+# 预期返回: {"status":"ok"}
 ```
 
-浏览器打开 `http://localhost` 即可使用。
+浏览器打开 `http://localhost:8880` 即可使用。
+
+### 服务端口
+
+| 服务 | 主机端口 | 说明 |
+|------|---------|------|
+| 前端 (Nginx) | 8880 | Web UI + API 代理 |
+| 后端 (FastAPI) | 38000 | 直接 API 访问（也可通过 Nginx 的 `/api/*` 访问） |
+
+### 数据持久化
+
+- SQLite 数据库：`./backend/data/ainote.db`（通过 volume 挂载到宿主机）
+- 备份方法：复制 `backend/data/` 目录即可
+
+### SSL / HTTPS
+
+Nginx 默认监听 8880 端口。如需 HTTPS：
+
+```bash
+apt install certbot python3-certbot-nginx -y
+certbot --nginx -d your-domain.com
+```
 
 ## 部署方式二：直接部署到服务器（不用 Docker）
 
@@ -82,7 +122,7 @@ pip install -r requirements.txt
 mkdir -p data
 
 # 测试启动（确认无报错后 Ctrl+C 退出）
-gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 120
+gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:38000 --timeout 120
 ```
 
 **设置 systemd 服务（后台常驻运行）：**
@@ -99,7 +139,7 @@ User=www-data
 WorkingDirectory=/opt/ainote/backend
 Environment=APP_ENV=production
 Environment=ENCRYPTION_KEY=eFqopC2tJsW_JLEMLDs6TZHcneubdDJhAuOKgda75eA=
-ExecStart=/opt/ainote/backend/venv/bin/gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000 --timeout 120
+ExecStart=/opt/ainote/backend/venv/bin/gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:38000 --timeout 120
 Restart=always
 RestartSec=5
 
@@ -130,7 +170,7 @@ npm run build
 ```bash
 sudo tee /etc/nginx/sites-available/ainote << 'EOF'
 server {
-    listen 80;
+    listen 8880;
     server_name _;
 
     # 前端静态文件
@@ -139,7 +179,7 @@ server {
 
     # API 反向代理
     location /api {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:38000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_buffering off;
@@ -171,11 +211,11 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 步骤 5：验证
 
 ```bash
-curl http://localhost/api/health
+curl http://localhost:38000/api/health
 # 预期返回: {"status":"ok"}
 ```
 
-浏览器打开 `http://服务器IP` 即可使用。
+浏览器打开 `http://服务器IP:8880` 即可使用。
 
 ### SSL / HTTPS
 
@@ -200,54 +240,6 @@ sudo journalctl -u ainote-backend -f
 sudo systemctl reload nginx
 ```
 
-## 部署指南（阿里云 Docker）
-
-### 前置条件
-
-- Ubuntu 22.04 或更高版本
-- 已安装 Docker 和 Docker Compose
-- 端口 80 未被占用
-
-### 部署步骤
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/ericyou1988/ainote.git
-cd ainote
-
-# 2. （可选）生成自定义加密密钥
-# 跳过此步骤则使用 docker-compose.yml 中的默认密钥
-export ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-
-# 3. 启动服务
-docker compose up -d --build
-
-# 4. 验证
-curl http://localhost/api/health
-# 预期返回: {"status":"ok"}
-```
-
-### 服务端口
-
-| 服务 | 主机端口 | 说明 |
-|------|---------|------|
-| 前端 (Nginx) | 80 | Web UI + API 代理 |
-| 后端 (FastAPI) | 8000 | 直接 API 访问（也可通过 Nginx 的 `/api/*` 访问） |
-
-### 数据持久化
-
-- SQLite 数据库：`./backend/data/ainote.db`（通过 volume 挂载到宿主机）
-- 备份方法：复制 `backend/data/` 目录即可
-
-### SSL / HTTPS
-
-Nginx 默认监听 80 端口。如需 HTTPS：
-
-```bash
-apt install certbot python3-certbot-nginx -y
-certbot --nginx -d your-domain.com
-```
-
 ## 配置说明
 
 ### 环境变量
@@ -263,7 +255,7 @@ certbot --nginx -d your-domain.com
 
 ```bash
 # 添加服务商（以 OpenRouter 为例）
-curl -X POST http://localhost/api/providers \
+curl -X POST http://localhost:38000/api/providers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "OpenRouter",
@@ -273,7 +265,7 @@ curl -X POST http://localhost/api/providers \
   }'
 
 # 设为当前服务商
-curl -X PUT http://localhost/api/providers/{provider_id}/set-current
+curl -X PUT http://localhost:38000/api/providers/{provider_id}/set-current
 ```
 
 **支持的平台：** 任意 OpenAI 兼容接口（OpenAI、OpenRouter、通义千问等）。
@@ -365,8 +357,8 @@ ainote/
 
 ## 常见问题
 
-- **端口 80 被占用**：停止系统 Nginx（`sudo systemctl stop nginx`）后再启动 Docker Compose
-- **端口 8000 被占用**：停止本地 uvicorn 进程
+- **端口 8880 被占用**：停止占用该端口的服务，或修改 docker-compose.yml 和 nginx.conf 中的端口
+- **端口 38000 被占用**：停止占用该端口的服务，或修改配置
 - **AI 分析返回空内容**：确认模型名与平台匹配。OpenRouter 平台后端会自动补全 `openrouter/` 前缀
 - **重启后 API Key 无法解密**：`ENCRYPTION_KEY` 必须保持一致。使用默认值或固定环境变量，不要在每次重启时更换
 
