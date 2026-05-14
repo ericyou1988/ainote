@@ -12,7 +12,7 @@ AI 驱动的个人笔记应用，融合提示词管理与英语学习。
 ```
 
 **技术栈：**
-- 前端：React 18、Vite、Tailwind CSS v4、Zustand
+- 前端：React 19、Vite 8、Tailwind CSS v4、Zustand、shadcn/ui
 - 后端：Python FastAPI、SQLAlchemy 2.0、SQLite、LiteLLM
 - 部署：Docker Compose + Nginx 反向代理
 
@@ -268,12 +268,35 @@ curl -X POST http://localhost:38000/api/providers \
 curl -X PUT http://localhost:38000/api/providers/{provider_id}/set-current
 ```
 
-**支持的平台：** 任意 OpenAI 兼容接口（OpenAI、OpenRouter、通义千问等）。
+**支持的平台：** 任意 OpenAI 兼容接口（OpenAI、OpenRouter、通义千问等），以及本地 Ollama 服务。
 
 **模型名填写规则：**
 - 直连平台（OpenAI、通义千问）：直接填模型名，如 `gpt-4o`
 - OpenRouter：填裸模型名即可（如 `tencent/hy3-preview:free`），后端会自动补全 `openrouter/` 前缀
 - 推理模型（如腾讯混元 HY3）完全支持，推理内容会正确渲染在分析面板和对话面板中
+
+### 本地 Ollama 配置
+
+如果你想在本地运行 Ollama 作为 AI 服务商：
+
+```bash
+# 1. 安装 Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 2. 拉取模型（以 qwen:7b 为例）
+ollama pull qwen:7b
+
+# 3. 启动 Ollama 服务
+ollama serve
+```
+
+在 AInote 的「设置」页面添加 AI 服务商：
+- **名称**：Ollama
+- **API Key**：随意填写（Ollama 不需要 API Key，填 `ollama` 即可）
+- **接口地址**：`http://localhost:11434/v1`（使用 OpenAI 兼容端点）
+- **模型名称**：`qwen:7b`（不带 `ollama/` 前缀）
+
+> **注意**：使用 `/v1` OpenAI 兼容端点而非 `ollama/` 前缀。LiteLLM 1.58.1 的 `ollama/` 前缀存在路由 bug，会请求错误的端点。
 
 ## 项目结构
 
@@ -294,9 +317,9 @@ ainote/
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/                  # 首页、编辑器、分析面板、对话、设置
+│   │   ├── components/             # 可复用 UI 组件（AnalysisPanel, EditorPanel, Shell 等）
+│   │   ├── pages/                  # 页面组件（NotesPage, SettingsPage）
 │   │   ├── stores/                 # Zustand 状态管理
-│   │   └── api/client.js           # Axios API 客户端
 │   ├── Dockerfile
 │   ├── nginx.conf                  # Nginx 配置（静态文件 + API 代理）
 │   └── package.json
@@ -355,12 +378,32 @@ ainote/
 - 一键测试连接（实际 completion 调用验证，10s 超时）
 - 支持推理模型（reasoning models），推理内容自动渲染
 
+### 加密密钥管理
+
+`ENCRYPTION_KEY` 用于 Fernet 对称加密，加密存储在数据库中的 API Key。
+
+**自动持久化**：首次启动时，如果 `.env` 文件中没有 `ENCRYPTION_KEY`，系统会自动生成一个并追加到 `.env` 文件中。后续启动都会读取这个固定的值。
+
+**systemd 服务中的密钥必须与 .env 文件一致**：
+```bash
+# 从 .env 文件读取并更新到 systemd 服务
+ENCRYPTION_KEY=$(grep ENCRYPTION_KEY /opt/ainote/backend/.env | cut -d= -f2-)
+sudo sed -i "s/^Environment=ENCRYPTION_KEY=.*/Environment=ENCRYPTION_KEY=$ENCRYPTION_KEY/" /etc/systemd/system/ainote-backend.service
+sudo systemctl daemon-reload && sudo systemctl restart ainote-backend
+```
+
+> **警告**：如果每次重启生成不同的 key，之前加密的 API Key 将无法解密（表现为"分析失败"）。
+
 ## 常见问题
 
 - **端口 8880 被占用**：停止占用该端口的服务，或修改 docker-compose.yml 和 nginx.conf 中的端口
 - **端口 38000 被占用**：停止占用该端口的服务，或修改配置
 - **AI 分析返回空内容**：确认模型名与平台匹配。OpenRouter 平台后端会自动补全 `openrouter/` 前缀
 - **重启后 API Key 无法解密**：`ENCRYPTION_KEY` 必须保持一致。使用默认值或固定环境变量，不要在每次重启时更换
+- **分析失败: InvalidToken**：加密密钥变更导致。运行上面的「加密密钥管理」命令修复
+- **Ollama 连接 404**：确保 `base_url` 使用 `http://localhost:11434/v1`（带 `/v1`），模型名不带 `ollama/` 前缀
+- **systemd 服务启动失败**：检查 `WorkingDirectory` 路径是否正确，确认 `www-data` 用户有 `data/` 目录的写权限
+- **Nginx 配置后 502**：确认后端正在运行 `sudo systemctl status ainote-backend`，检查 Nginx 日志 `sudo tail -f /var/log/nginx/error.log`
 
 ## 许可证
 

@@ -26,12 +26,23 @@ def analyze_note_endpoint(note_id: str, db: Session = Depends(get_db)):
     if not provider:
         raise HTTPException(status_code=400, detail="请先配置并启用 AI 服务商")
 
+    note_id_val = note.id
+
     async def generate():
+        from app.database import SessionLocal
+        local_db = SessionLocal()
         try:
-            async for chunk in analyze_note(db, note, provider):
+            local_note = local_db.query(Note).filter(Note.id == note_id_val).first()
+            async for chunk in analyze_note(local_db, local_note, provider):
                 yield chunk
         except Exception as e:
-            yield f"\n\n[分析失败: {str(e)}]"
+            import traceback
+            local_db.rollback()
+            tb = traceback.format_exc()
+            print(f"ANALYZE ERROR: {type(e).__name__}: {e}\n{tb}")
+            yield f"\n\n[分析失败: {type(e).__name__}: {e}]"
+        finally:
+            local_db.close()
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -54,11 +65,20 @@ def send_chat(note_id: str, data: ChatRequest, db: Session = Depends(get_db)):
     if not provider:
         raise HTTPException(status_code=400, detail="请先配置并启用 AI 服务商")
 
+    note_id_val = note.id
+    user_message = data.message
+
     async def generate():
+        from app.database import SessionLocal
+        local_db = SessionLocal()
         try:
-            async for chunk in chat_message(db, note, provider, data.message):
+            local_note = local_db.query(Note).filter(Note.id == note_id_val).first()
+            async for chunk in chat_message(local_db, local_note, provider, user_message):
                 yield chunk
         except Exception as e:
+            local_db.rollback()
             yield f"\n\n[对话失败: {str(e)}]"
+        finally:
+            local_db.close()
 
     return StreamingResponse(generate(), media_type="text/event-stream")

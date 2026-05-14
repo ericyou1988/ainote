@@ -1,0 +1,163 @@
+<h2>PC 端侧边栏布局方案</h2>
+<p class="subtitle">AInote 桌面端重构 — 选择你最认可的布局方式</p>
+
+<div class="cards">
+
+<!-- Option A: Notion-style full sidebar -->
+<div class="card" data-choice="a" onclick="toggleSelect(this)">
+  <div class="card-image" style="height:280px; background:#f6f2fc; padding:0; display:flex; flex-direction:column; overflow:hidden; border-bottom:1px solid #e4e1eb;">
+    <div style="height:48px; background:white; border-bottom:1px solid #e4e1eb; display:flex; align-items:center; padding:0 16px; font-weight:bold; font-size:14px; color:#3730a3; flex-shrink:0;">AI<span style="color:#3730a3">note</span></div>
+    <div style="display:flex; flex:1; overflow:hidden;">
+      <div style="width:260px; background:white; border-right:1px solid #e4e1eb; display:flex; flex-direction:column; flex-shrink:0;">
+        <div style="padding:12px 16px;">
+          <div style="background:#f6f2fc; border-radius:8px; padding:8px 12px; font-size:12px; color:#777584; margin-bottom:12px;"> 搜索笔记...</div>
+          <div style="display:flex; gap:4px; margin-bottom:12px;">
+            <span style="background:#3730a3; color:white; padding:2px 10px; border-radius:99px; font-size:11px;">全部</span>
+            <span style="background:#f6f2fc; padding:2px 10px; border-radius:99px; font-size:11px; color:#777584;">中文</span>
+            <span style="background:#f6f2fc; padding:2px 10px; border-radius:99px; font-size:11px; color:#777584;">英文</span>
+            <span style="background:#f6f2fc; padding:2px 10px; border-radius:99px; font-size:11px; color:#777584;">提示词</span>
+          </div>
+        </div>
+        <div style="padding:0 16px; overflow-y:auto;">
+          <div style="padding:8px 12px; border-radius:6px; background:#f6f2fc; margin-bottom:2px; font-size:12px;">
+            <div style="font-weight:600;">Test: Reasoning model</div>
+            <div style="color:#777584; font-size:11px;">9天前 · 英文</div>
+          </div>
+          <div style="padding:8px 12px; border-radius:6px; margin-bottom:2px; font-size:12px;">
+            <div style="font-weight:600;">Act as a senior data</div>
+            <div style="color:#777584; font-size:11px;">9天前 · 英文</div>
+          </div>
+          <div style="padding:8px 12px; border-radius:6px; margin-bottom:2px; font-size:12px;">
+            <div style="font-weight:600;">写一个Python脚本</div>
+            <div style="color:#777584; font-size:11px;">9天前 · 中文 提示词</div>
+          </div>
+        </div>
+        <div style="padding:12px 16px; border-top:1px solid #e4e1eb; display:flex; justify-content:space-between; align-items:center; margin-top:auto;">
+          <span style="font-size:11px; color:#c8c4d5;">v1.0</span>
+          <span style="font-size:11px; color:#3730a3;"> 设置</span>
+        </div>
+      </div>
+      <div style="flex:1; padding:32px; display:flex; align-items:center; justify-content:center; color:#c8c4d5; font-size:14px;">
+        ← 点击左侧笔记进入编辑器 / 分析面板
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <h3>方案 A：Notion 式侧边栏</h3>
+    <p>左侧 260px 固定侧边栏（笔记列表 + 搜索 + 筛选），右侧主内容区。点击笔记后右侧显示编辑器或分析面板。移动端侧边栏可收起为汉堡菜单。</p>
+  </div>
+</div>
+
+<!-- Option B: List + detail split -->
+<div class="card" data-choice="b" onclick="toggleSelect(this)">
+  <div class="card-image" style="height:280px; background:#f6f2fc; padding:0; display:flex; flex-direction:column; overflow:hidden; border-bottom:1px solid #e4e1eb;">
+    <div style="height:48px; background:white; border-bottom:1px solid #e4e1eb; display:flex; align-items:center; padding:0 16px; justify-content:space-between; flex-shrink:0;">
+      <span style="font-weight:bold; font-size:14px; color:#3730a3;">AI<span style="color:#3730a3">note</span></span>
+      <span style="font-size:12px; color:#3730a3;">+ 新建笔记</span>
+    </div>
+    <div style="display:flex; flex:1; overflow:hidden;">
+      <div style="width:360px; background:white; border-right:1px solid #e4e1eb; display:flex; flex-direction:column; flex-shrink:0;">
+        <div style="padding:12px 16px; display:flex; gap:4px;">
+          <span style="background:#3730a3; color:white; padding:2px 10px; border-radius:99px; font-size:11px;">全部</span>
+          <span style="background:#f6f2fc; padding:2px 10px; border-radius:99px; font-size:11px; color:#777584;">中文</span>
+          <span style="background:#f6f2fc; padding:2px 10px; border-radius:99px; font-size:11px; color:#777584;">英文</span>
+          <span style="background:#f6f2fc; padding:2px 10px; border-radius:99px; font-size:11px; color:#777584;">提示词</span>
+        </div>
+        <div style="padding:0 16px; overflow-y:auto; flex:1;">
+          <div style="padding:10px 12px; border-radius:6px; background:#f6f2fc; margin-bottom:2px; font-size:12px; border-left:3px solid #3730a3;">
+            <div style="font-weight:600;">写一个Python脚本</div>
+            <div style="color:#777584; font-size:11px;">你是一位资深 Python 工程师...</div>
+            <div style="color:#c8c4d5; font-size:10px; margin-top:4px;">9天前 · 中文 提示词</div>
+          </div>
+          <div style="padding:10px 12px; border-radius:6px; margin-bottom:2px; font-size:12px;">
+            <div style="font-weight:600;">Test: Reasoning model</div>
+            <div style="color:#777584; font-size:11px;">You are a senior data scientist...</div>
+            <div style="color:#c8c4d5; font-size:10px; margin-top:4px;">9天前 · 英文</div>
+          </div>
+          <div style="padding:10px 12px; border-radius:6px; margin-bottom:2px; font-size:12px;">
+            <div style="font-weight:600;">中文筛选测试</div>
+            <div style="color:#777584; font-size:11px;">这是一条纯中文笔记</div>
+            <div style="color:#c8c4d5; font-size:10px; margin-top:4px;">9天前 · 中文</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1; padding:24px; display:flex; flex-direction:column; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <span style="font-size:14px; font-weight:600;">写一个Python脚本，从API获取天气数据</span>
+          <div style="display:flex; gap:8px;">
+            <span style="background:#fef3e2; padding:2px 8px; border-radius:99px; font-size:10px; color:#9a6700;">中文</span>
+            <span style="background:#ede9fe; padding:2px 8px; border-radius:99px; font-size:10px; color:#6d28d9;">提示词</span>
+          </div>
+        </div>
+        <div style="flex:1; overflow-y:auto; background:white; border-radius:8px; border:1px solid #e4e1eb; padding:16px; font-size:12px; line-height:1.8; color:#464553;">
+          你是一位资深 Python 工程师，请帮我编写一个从 OpenWeatherMap API 获取实时天气数据的脚本...
+          <div style="margin-top:12px; padding:12px; background:#f6f2fc; border-radius:6px; border-left:3px solid #3730a3;">
+            <div style="font-size:11px; font-weight:600; color:#3730a3; margin-bottom:6px;">AI 分析结果</div>
+            <div>角色设定：资深 Python 工程师...</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <span style="flex:1; padding:8px; background:#3730a3; color:white; text-align:center; border-radius:8px; font-size:12px; font-weight:500;">AI 分析</span>
+          <span style="flex:1; padding:8px; background:white; border:1px solid #e4e1eb; text-align:center; border-radius:8px; font-size:12px;">继续追问</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <h3>方案 B：列表 + 详情分栏</h3>
+    <p>左侧 360px 笔记列表（带搜索和筛选），右侧显示选中笔记的详情/编辑器/分析。两栏同时可见，不用来回跳转。移动端退化为全屏列表+全屏详情。</p>
+  </div>
+</div>
+
+<!-- Option C: Tabbed workspace -->
+<div class="card" data-choice="c" onclick="toggleSelect(this)">
+  <div class="card-image" style="height:280px; background:#f6f2fc; padding:0; display:flex; flex-direction:column; overflow:hidden; border-bottom:1px solid #e4e1eb;">
+    <div style="height:48px; background:white; border-bottom:1px solid #e4e1eb; display:flex; align-items:center; padding:0 16px; flex-shrink:0;">
+      <span style="font-weight:bold; font-size:14px; color:#3730a3; margin-right:24px;">AI<span style="color:#3730a3">note</span></span>
+      <div style="display:flex; gap:2px;">
+        <span style="padding:6px 16px; border-radius:6px 6px 0 0; font-size:12px; font-weight:500; background:#f6f2fc; color:#1a1a19;">笔记</span>
+        <span style="padding:6px 16px; border-radius:6px 6px 0 0; font-size:12px; color:#777584;">分析面板</span>
+        <span style="padding:6px 16px; border-radius:6px 6px 0 0; font-size:12px; color:#777584;">对话</span>
+        <span style="padding:6px 16px; border-radius:6px 6px 0 0; font-size:12px; color:#777584;">设置</span>
+      </div>
+      <div style="flex:1;"></div>
+      <span style="font-size:12px; color:#3730a3;">+ 新建</span>
+    </div>
+    <div style="flex:1; padding:24px;">
+      <div style="background:white; border-radius:8px; border:1px solid #e4e1eb; padding:16px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13px; font-weight:600;">写一个Python脚本，从API获取天气数据</span>
+          <div style="display:flex; gap:4px;">
+            <span style="background:#fef3e2; padding:1px 8px; border-radius:99px; font-size:10px; color:#9a6700;">中文</span>
+            <span style="background:#ede9fe; padding:1px 8px; border-radius:99px; font-size:10px; color:#6d28d9;">提示词</span>
+          </div>
+        </div>
+        <div style="font-size:12px; color:#464553; line-height:1.6;">你是一位资深 Python 工程师，请帮我编写一个从 OpenWeatherMap API 获取实时天气数据的脚本...</div>
+        <div style="margin-top:8px; padding:10px; background:#f6f2fc; border-radius:6px; font-size:11px; border-left:3px solid #3730a3;">
+          <span style="font-weight:500; color:#3730a3;">AI 分析</span> · 角色设定清晰，任务明确
+        </div>
+      </div>
+      <div style="background:white; border-radius:8px; border:1px solid #e4e1eb; padding:16px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:600;">Test: Reasoning model analysis</div>
+        <div style="font-size:12px; color:#777584;">You are a senior data scientist...</div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <h3>方案 C：标签页工作区</h3>
+    <p>顶部导航栏含笔记/分析/对话/设置标签页。主区域始终为单栏，通过标签页切换功能模块。类似浏览器标签页的概念，适合习惯浏览器操作的用户。移动端用底部标签栏。</p>
+  </div>
+</div>
+
+</div>
+
+<div class="pros-cons" style="margin-top:20px;">
+  <div class="pros">
+    <h4>核心区别</h4>
+    <ul>
+      <li><strong>A</strong> = 侧边栏 + 全屏内容（最省空间，列表被隐藏）</li>
+      <li><strong>B</strong> = 两栏同时可见（列表和内容并存，适合 PC 大空间）</li>
+      <li><strong>C</strong> = 单栏 + 顶部标签切换（最接近现状，改动最小）</li>
+    </ul>
+  </div>
+</div>

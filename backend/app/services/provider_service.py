@@ -83,8 +83,12 @@ async def test_connection(provider: AIProvider) -> tuple[bool, str, float | None
     try:
         start = time.time()
         model_name = provider.model
+        known_prefixes = ("openrouter/", "openai/", "anthropic/", "azure/", "groq/", "deepseek/", "dashscope/", "ollama/")
         if "openrouter" in provider.base_url.lower() and "/" not in model_name.split("/")[0]:
             model_name = f"openrouter/{model_name}"
+        elif model_name.split("/")[0] not in known_prefixes:
+            # 自定义 OpenAI 兼容端点，使用 openai/ 前缀告知 LiteLLM
+            model_name = f"openai/{model_name}"
         response = litellm.completion(
             model=model_name,
             api_base=provider.base_url,

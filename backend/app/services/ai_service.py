@@ -113,8 +113,11 @@ def _extract_delta(chunk) -> str | None:
 
 
 def _resolve_model(model: str, base_url: str) -> str:
+    known_prefixes = ("openrouter/", "openai/", "anthropic/", "azure/", "groq/", "deepseek/", "dashscope/", "ollama/")
     if "openrouter" in base_url.lower() and "/" not in model.split("/")[0]:
         return f"openrouter/{model}"
+    if model.split("/")[0] not in known_prefixes:
+        return f"openai/{model}"
     return model
 
 
@@ -153,12 +156,19 @@ async def analyze_note(db: Session, note: Note, provider: AIProvider):
             yield content
 
     # Parse and save analysis result
+    # Strip markdown code fences if present
+    text = full_content.strip()
+    if text.startswith("```"):
+        # Remove leading ```json or ```
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3].strip()
     try:
-        analysis_result = json.loads(full_content)
+        analysis_result = json.loads(text)
         note.analysis_result = analysis_result
         note.status = NoteStatus.analyzed
         db.commit()
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, IndexError):
         # If not valid JSON, save as text
         note.analysis_result = {"raw": full_content}
         note.status = NoteStatus.analyzed
@@ -181,9 +191,19 @@ async def chat_message(db: Session, note: Note, provider: AIProvider, user_messa
 
     api_key = decrypt_key(provider.api_key)
 
-    # Build message history
-    system_prompt = "你是 AInote 的 AI 助手，基于用户笔记内容进行对话。请结合笔记上下文来回答问题。"
-    messages = [{"role": "system", "content": system_prompt}]
+    # Build message history with note context
+    messages = []
+    # Inject note content as context
+    messages.append({
+        "role": "system",
+        "content": f"你是 AInote 的 AI 助手。以下是当前笔记的内容和分析结果，请基于这些内容进行对话。\n\n笔记内容：\n{note.content}",
+    })
+    if note.analysis_result:
+        analysis_text = json.dumps(note.analysis_result, ensure_ascii=False, indent=2) if isinstance(note.analysis_result, dict) else str(note.analysis_result)
+        messages.append({
+            "role": "system",
+            "content": f"AI 分析结果：\n{analysis_text}",
+        })
     messages += conversation.messages
 
     response = await litellm.acompletion(

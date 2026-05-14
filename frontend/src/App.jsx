@@ -1,19 +1,19 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { HomePage } from './pages/HomePage';
-import { EditorPage } from './pages/EditorPage';
-import { AnalysisPage } from './pages/AnalysisPage';
-import { ChatPage } from './pages/ChatPage';
+import { Shell } from './components/Shell';
+import { NotesPage } from './pages/NotesPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export default function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/editor/:id?" element={<EditorPage />} />
-        <Route path="/analysis/:id" element={<AnalysisPage />} />
-        <Route path="/chat/:id" element={<ChatPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/" element={<Shell />}>
+          <Route index element={<NotesPage />} />
+          <Route path="notes" element={<NotesPage />} />
+          <Route path="notes/:id" element={<NotesPage />} />
+          <Route path="notes/:id/analysis" element={<NotesPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
       </Routes>
     </HashRouter>
   );

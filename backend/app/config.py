@@ -20,4 +20,13 @@ if not settings.DATABASE_URL:
 
 if not settings.ENCRYPTION_KEY:
     from cryptography.fernet import Fernet
-    settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+    if os.path.exists(env_path):
+        # .env exists but ENCRYPTION_KEY not loaded — reload with explicit path
+        settings.__init__(_env_file=env_path)
+    if not settings.ENCRYPTION_KEY:
+        settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
+        # Persist key to .env file
+        os.makedirs(os.path.dirname(env_path), exist_ok=True)
+        with open(env_path, 'a') as f:
+            f.write(f'\nENCRYPTION_KEY={settings.ENCRYPTION_KEY}\n')
